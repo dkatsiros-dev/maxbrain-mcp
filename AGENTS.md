@@ -97,10 +97,11 @@ npm pack --dry-run      # verify payload is 3 files
 
 ## Open tasks (as of 2026-04-13)
 
-- Compare owner's personal template schema vs hardcoded `PROPERTY_DEFAULTS` — log any drift in CHANGELOG and consider making defaults schema-driven only
 - Publish public duplicable template link
 - Add `get_milestones` / `get_habits` tools if Milestones + Habit Tracker DBs are useful
-- Set up GitHub Actions CI: `npm ci && npm run build && npm run typecheck && npm test` on PR
 - Add a demo GIF to README top
+- **v1.2 tool candidates from `SCHEMA-AUDIT.md`:** `snooze_task`, `block_task`/`unblock_task`, `add_subtask`, extended `create_note` (URL/fleeting/remind_me), `get_reminders`, `get_fleeting_notes`, `get_blocked_tasks`, `get_milestones`
+- ✅ DONE: Schema audit — all defaults match live template (see `SCHEMA-AUDIT.md`)
+- ✅ DONE: GitHub Actions CI (`.github/workflows/ci.yml`)
 
 See `../todos.md` for product-level backlog.
