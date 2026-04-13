@@ -1,6 +1,6 @@
 {
   "name": "@dkatsiros/notion-brain",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "MCP server connecting Claude Code, Gemini CLI, and other MCP clients to your Notion second brain (PARA method)",
   "type": "module",
   "bin": {
@@ -9,8 +9,18 @@
   "main": "./dist/index.js",
   "files": [
     "dist/**/*.js",
-    "README.md"
+    "README.md",
+    "LICENSE"
   ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dkatsiros-dev/maxbrain-mcp.git"
+  },
+  "bugs": {
+    "url": "https://github.com/dkatsiros-dev/maxbrain-mcp/issues"
+  },
+  "homepage": "https://github.com/dkatsiros-dev/maxbrain-mcp#readme",
+  "author": "Dimitris Katsiros",
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",

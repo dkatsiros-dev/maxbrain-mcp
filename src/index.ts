@@ -775,6 +775,38 @@ function registerTools(server: McpServer) {
     },
   );
 
+  // --- update_project ---
+  server.tool(
+    'update_project',
+    `Update an existing project. Provide any subset of fields to change. Valid status values: ${schema.projects.properties.Status?.options?.join(', ') || 'check DB'}.`,
+    {
+      project_id: z.string().describe('Project page ID to update'),
+      name: z.string().optional().describe('New project name/title'),
+      status: z.string().optional().describe('New status'),
+      area_id: z.string().optional().describe('New Area/Resource page ID (replaces existing relation)'),
+      archive: z.boolean().optional().describe('Set archive flag'),
+    },
+    async ({ project_id, name, status, area_id, archive }) => {
+      try {
+        const properties: Parameters<typeof notion.pages.update>[0]['properties'] = {};
+        if (name !== undefined) properties['Name'] = { title: [{ text: { content: name } }] };
+        if (status !== undefined) properties[prop('projects', 'Status')] = { status: { name: status } };
+        if (area_id !== undefined) properties[prop('projects', 'Area')] = { relation: [{ id: area_id }] };
+        if (archive !== undefined) properties[prop('projects', 'Archive')] = { checkbox: archive };
+
+        if (Object.keys(properties).length === 0) {
+          return { content: [{ type: 'text', text: 'No fields provided to update.' }], isError: true };
+        }
+        await notion.pages.update({ page_id: project_id, properties });
+        const fullPage = await notion.pages.retrieve({ page_id: project_id });
+        if (!isFullPage(fullPage)) throw new Error('Could not retrieve updated page');
+        return { content: [{ type: 'text', text: JSON.stringify({ success: true, project: formatProject(fullPage) }, null, 2) }] };
+      } catch (err) {
+        return { content: [{ type: 'text', text: `Error: ${formatError(err)}` }], isError: true };
+      }
+    },
+  );
+
   // --- get_tasks ---
   server.tool(
     'get_tasks',
@@ -846,6 +878,46 @@ function registerTools(server: McpServer) {
         const page = await notion.pages.create({ parent: { database_id: dbId('tasks') }, properties });
         const fullPage = await notion.pages.retrieve({ page_id: page.id });
         if (!isFullPage(fullPage)) throw new Error('Could not retrieve created page');
+        return { content: [{ type: 'text', text: JSON.stringify({ success: true, task: formatTask(fullPage) }, null, 2) }] };
+      } catch (err) {
+        return { content: [{ type: 'text', text: `Error: ${formatError(err)}` }], isError: true };
+      }
+    },
+  );
+
+  // --- update_task ---
+  server.tool(
+    'update_task',
+    `Update an existing task. Provide any subset of fields to change. Done statuses: ${schema.tasks.properties.Done?.options?.join(', ') || 'check DB'}. Priority: ${schema.tasks.properties.Priority?.options?.join(', ') || 'check DB'}.`,
+    {
+      task_id: z.string().describe('Task page ID to update'),
+      title: z.string().optional().describe('New task title'),
+      description: z.string().optional().describe('New task description'),
+      done_status: z.string().optional().describe('New Done status (e.g. "In progress", "Done")'),
+      priority: z.string().optional().describe('New priority'),
+      due_date: z.string().optional().describe('New due date (YYYY-MM-DD) or empty string to clear'),
+      project_id: z.string().optional().describe('New project ID (replaces existing relation)'),
+      tags: z.array(z.string()).optional().describe('New tags list (replaces existing)'),
+      assignee: z.string().optional().describe('New assignee'),
+    },
+    async ({ task_id, title, description, done_status, priority, due_date, project_id, tags, assignee }) => {
+      try {
+        const properties: Parameters<typeof notion.pages.update>[0]['properties'] = {};
+        if (title !== undefined) properties['Name'] = { title: [{ text: { content: title } }] };
+        if (description !== undefined) properties[prop('tasks', 'Description')] = { rich_text: [{ text: { content: description } }] };
+        if (done_status !== undefined) properties[prop('tasks', 'Done')] = { status: { name: done_status } };
+        if (priority !== undefined) properties[prop('tasks', 'Priority')] = { status: { name: priority } };
+        if (due_date !== undefined) properties[prop('tasks', 'Due')] = due_date === '' ? { date: null } : { date: { start: due_date } };
+        if (project_id !== undefined) properties[prop('tasks', 'Project')] = { relation: [{ id: project_id }] };
+        if (tags !== undefined) properties[prop('tasks', 'Tags')] = { multi_select: tags.map((t) => ({ name: t })) };
+        if (assignee !== undefined) properties[prop('tasks', 'Assignee')] = { select: { name: assignee } };
+
+        if (Object.keys(properties).length === 0) {
+          return { content: [{ type: 'text', text: 'No fields provided to update.' }], isError: true };
+        }
+        await notion.pages.update({ page_id: task_id, properties });
+        const fullPage = await notion.pages.retrieve({ page_id: task_id });
+        if (!isFullPage(fullPage)) throw new Error('Could not retrieve updated page');
         return { content: [{ type: 'text', text: JSON.stringify({ success: true, task: formatTask(fullPage) }, null, 2) }] };
       } catch (err) {
         return { content: [{ type: 'text', text: `Error: ${formatError(err)}` }], isError: true };

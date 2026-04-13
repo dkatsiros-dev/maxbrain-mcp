@@ -1,5 +1,8 @@
 # Max Brain MCP Server
 
+[![npm version](https://img.shields.io/npm/v/@dkatsiros/notion-brain.svg)](https://www.npmjs.com/package/@dkatsiros/notion-brain)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](./LICENSE)
+
 Connect your LLM — **Claude Code**, **Gemini CLI**, **Cursor**, or any MCP-compatible client — to your Notion second brain (PARA method). Manage Projects, Tasks, Notes, Goals, and Areas through natural conversation.
 
 ## What It Does
@@ -151,8 +154,10 @@ Talk to your LLM naturally:
 | `search` | Full-text search across all databases |
 | `get_projects` | List projects, filter by status. Supports "active" shorthand |
 | `create_project` | Create a new project with status and area |
+| `update_project` | Update project fields (name, status, area, archive) |
 | `get_tasks` | List tasks, filter by project, completion, or status |
 | `create_task` | Create a task with due date, priority, project link, tags |
+| `update_task` | Update task fields (title, status, priority, due, project, tags, assignee) |
 | `complete_task` | Mark a task as done |
 | `get_notes` | List notes, filter by project, area, or tag |
 | `create_note` | Create a note with project/area link and tags |
