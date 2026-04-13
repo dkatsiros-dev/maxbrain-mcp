@@ -225,6 +225,22 @@ All env vars except `NOTION_API_KEY` are optional:
 - The server validates properties against expected defaults
 - If you renamed properties in Notion, set `PROP_*` env var overrides
 
+## Install from npm
+
+Published: [`@dkatsiros/notion-brain`](https://www.npmjs.com/package/@dkatsiros/notion-brain) on npm (public).
+
+The config snippets above use `npx -y @dkatsiros/notion-brain`, which downloads and runs the latest version on demand — no manual install required.
+
+If you prefer a global install:
+```bash
+npm install -g @dkatsiros/notion-brain
+```
+Then replace `"command": "npx"` and `"args": ["-y", "@dkatsiros/notion-brain"]` with:
+```json
+"command": "notion-brain",
+"args": []
+```
+
 ## Development
 
 ```bash
@@ -233,7 +249,16 @@ cd maxbrain-mcp
 npm install
 npm run build
 npm run typecheck
-npm run dev  # watch mode
+npm test          # smoke tests
+npm run dev       # watch mode
+```
+
+### Publishing
+
+```bash
+npm run build
+npm pack --dry-run   # verify payload: only dist/index.js + README + package.json
+npm publish --access public --auth-type=web
 ```
 
 ## License
