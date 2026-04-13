@@ -100,7 +100,8 @@ npm pack --dry-run      # verify payload is 3 files
 - Publish public duplicable template link
 - Add `get_milestones` / `get_habits` tools if Milestones + Habit Tracker DBs are useful
 - Add a demo GIF to README top
-- **v1.2 tool candidates from `SCHEMA-AUDIT.md`:** `snooze_task`, `block_task`/`unblock_task`, `add_subtask`, extended `create_note` (URL/fleeting/remind_me), `get_reminders`, `get_fleeting_notes`, `get_blocked_tasks`, `get_milestones`
+- **Remaining v1.2+ tool candidates from `SCHEMA-AUDIT.md`:** `block_task`/`unblock_task`, `add_subtask`, extended `create_note` (URL/fleeting/remind_me fields), `get_fleeting_notes`, `get_milestones`
+- ✅ DONE v1.2.0: `snooze_task`, `get_blocked_tasks`, `get_reminders`
 - ✅ DONE: Schema audit — all defaults match live template (see `SCHEMA-AUDIT.md`)
 - ✅ DONE: GitHub Actions CI (`.github/workflows/ci.yml`)
 

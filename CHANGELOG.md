@@ -3,6 +3,14 @@
 All notable changes to `@dkatsiros/notion-brain` are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.2.0] — 2026-04-13
+
+### Added
+- `snooze_task` tool — set/clear a task's Snooze date
+- `get_blocked_tasks` tool — tasks with non-empty "Blocked by" relation (excludes done)
+- `get_reminders` tool — notes with "Remind Me Date"; defaults to today/past, `include_future` flag
+- `PROPERTY_DEFAULTS` extended: Tasks.Snooze, Tasks."Blocked by", Notes."Remind Me Date", Notes.Fleeting, Notes.URL (validated on startup)
+
 ## [1.1.0] — 2026-04-13
 
 ### Added

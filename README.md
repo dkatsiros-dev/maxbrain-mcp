@@ -159,6 +159,9 @@ Talk to your LLM naturally:
 | `create_task` | Create a task with due date, priority, project link, tags |
 | `update_task` | Update task fields (title, status, priority, due, project, tags, assignee) |
 | `complete_task` | Mark a task as done |
+| `snooze_task` | Defer a task until a given date (sets Snooze) |
+| `get_blocked_tasks` | List tasks with a non-empty Blocked by relation |
+| `get_reminders` | List notes with a Remind Me Date (defaults to today/past) |
 | `get_notes` | List notes, filter by project, area, or tag |
 | `create_note` | Create a note with project/area link and tags |
 | `get_goals` | List goals, filter by status, exclude archived |

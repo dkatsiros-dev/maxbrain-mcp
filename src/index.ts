@@ -86,6 +86,8 @@ const PROPERTY_DEFAULTS: Record<DbKey, Record<string, string>> = {
     Assignee: 'select',
     Description: 'rich_text',
     Difficulty: 'select',
+    Snooze: 'date',
+    'Blocked by': 'relation',
   },
   projects: {
     Status: 'status',
@@ -101,6 +103,9 @@ const PROPERTY_DEFAULTS: Record<DbKey, Record<string, string>> = {
     Tags: 'multi_select',
     Favorite: 'checkbox',
     Archive: 'checkbox',
+    'Remind Me Date': 'date',
+    Fleeting: 'checkbox',
+    URL: 'url',
   },
   areas: {
     Type: 'status',
@@ -941,6 +946,91 @@ function registerTools(server: McpServer) {
         const fullPage = await notion.pages.retrieve({ page_id: task_id });
         if (!isFullPage(fullPage)) throw new Error('Could not retrieve updated page');
         return { content: [{ type: 'text', text: JSON.stringify({ success: true, task: formatTask(fullPage) }, null, 2) }] };
+      } catch (err) {
+        return { content: [{ type: 'text', text: `Error: ${formatError(err)}` }], isError: true };
+      }
+    },
+  );
+
+  // --- snooze_task ---
+  server.tool(
+    'snooze_task',
+    'Snooze a task until a given date (sets the Snooze date property). Pass an empty string to clear the snooze.',
+    {
+      task_id: z.string().describe('Task page ID'),
+      until: z.string().describe('Snooze until date (YYYY-MM-DD), or empty string to clear'),
+    },
+    async ({ task_id, until }) => {
+      try {
+        await notion.pages.update({
+          page_id: task_id,
+          properties: {
+            [prop('tasks', 'Snooze')]: until === '' ? { date: null } : { date: { start: until } },
+          },
+        });
+        const fullPage = await notion.pages.retrieve({ page_id: task_id });
+        if (!isFullPage(fullPage)) throw new Error('Could not retrieve updated page');
+        return { content: [{ type: 'text', text: JSON.stringify({ success: true, task: formatTask(fullPage) }, null, 2) }] };
+      } catch (err) {
+        return { content: [{ type: 'text', text: `Error: ${formatError(err)}` }], isError: true };
+      }
+    },
+  );
+
+  // --- get_blocked_tasks ---
+  server.tool(
+    'get_blocked_tasks',
+    'List tasks that have at least one blocker (non-empty "Blocked by" relation). Useful for reviewing what is waiting on other work.',
+    {
+      limit: z.number().int().min(1).max(100).optional().default(50).describe('Max tasks (default 50)'),
+    },
+    async ({ limit = 50 }) => {
+      try {
+        const blockedByProp = prop('tasks', 'Blocked by');
+        const doneProp = prop('tasks', 'Done');
+        const filter: NotionFilter = {
+          and: [
+            { property: blockedByProp, relation: { is_not_empty: true } },
+            { property: doneProp, status: { does_not_equal: 'Done' } },
+          ],
+        };
+        const pages = await queryWithFallback(
+          dbId('tasks'),
+          filter,
+          [{ property: prop('tasks', 'Due'), direction: 'ascending' }],
+          limit,
+        );
+        const tasks = pages.map(formatTask);
+        return { content: [{ type: 'text', text: JSON.stringify({ count: tasks.length, tasks }, null, 2) }] };
+      } catch (err) {
+        return { content: [{ type: 'text', text: `Error: ${formatError(err)}` }], isError: true };
+      }
+    },
+  );
+
+  // --- get_reminders ---
+  server.tool(
+    'get_reminders',
+    'List notes with a "Remind Me Date" set. Defaults to reminders due today or earlier. Useful for daily review.',
+    {
+      include_future: z.boolean().optional().default(false).describe('Include reminders with future dates (default: false — only today/past)'),
+      limit: z.number().int().min(1).max(100).optional().default(50).describe('Max notes (default 50)'),
+    },
+    async ({ include_future = false, limit = 50 }) => {
+      try {
+        const remindProp = prop('notes', 'Remind Me Date');
+        const today = new Date().toISOString().slice(0, 10);
+        const filters: NotionFilter[] = [{ property: remindProp, date: { is_not_empty: true } }];
+        if (!include_future) filters.push({ property: remindProp, date: { on_or_before: today } });
+        const filter: NotionFilter = filters.length === 1 ? filters[0]! : ({ and: filters } as NotionFilter);
+        const pages = await queryWithFallback(
+          dbId('notes'),
+          filter,
+          [{ property: remindProp, direction: 'ascending' }],
+          limit,
+        );
+        const notes = pages.map(formatNote);
+        return { content: [{ type: 'text', text: JSON.stringify({ count: notes.length, notes }, null, 2) }] };
       } catch (err) {
         return { content: [{ type: 'text', text: `Error: ${formatError(err)}` }], isError: true };
       }
