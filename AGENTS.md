@@ -89,20 +89,30 @@ npm pack --dry-run      # verify payload is 3 files
 | `AGENTS.md` | **This file** |
 | `README.md` | User-facing docs — install, setup per client, tools, troubleshooting |
 | `LICENSE` | MIT |
+| `src/setup.ts` | Interactive setup CLI (`notion-brain setup`) |
+| `src/doctor.ts` | Health check — CLI + `health_check` MCP tool (single source of truth) |
+| `src/schema-defaults.ts` | `DB_KEYS`, `PROPERTY_DEFAULTS`, `EXPECTED_STATUS_OPTIONS`, `normalizeOption()` |
+| `src/config-paths.ts` | Cross-platform MCP-client config paths |
+| `template/README.md` + `template/structure-spec.md` | Public template docs |
 
 ## Secrets handling
 
 - The `NOTION_API_KEY` for the owner's workspace lives in `../.mcp.json` (project root, gitignored). Agents can read it from there for live e2e. Never echo it into commits, PR descriptions, or user-facing output.
 - If a user pastes a token into chat, tell them to rotate it immediately and never stage it.
 
-## Open tasks (as of 2026-04-13)
+## Current state (2026-04-19)
 
-- Publish public duplicable template link
-- Add `get_milestones` / `get_habits` tools if Milestones + Habit Tracker DBs are useful
-- Add a demo GIF to README top
-- **Remaining v1.2+ tool candidates from `SCHEMA-AUDIT.md`:** `block_task`/`unblock_task`, `add_subtask`, extended `create_note` (URL/fleeting/remind_me fields), `get_fleeting_notes`, `get_milestones`
-- ✅ DONE v1.2.0: `snooze_task`, `get_blocked_tasks`, `get_reminders`
-- ✅ DONE: Schema audit — all defaults match live template (see `SCHEMA-AUDIT.md`)
-- ✅ DONE: GitHub Actions CI (`.github/workflows/ci.yml`)
+- **v1.6.2 published.** 14 MCP tools. Setup CLI + doctor CLI + `health_check` MCP tool. Markdown rendering. Fuzzy status-option matching. Tag pollution prevention.
+- **Public template launch-ready** — branded, scrubbed, doctor-green at https://dkatsiros.notion.site/Max-Brain-9977fa4ee5e683768e3b816d8fd81466
+- **v1.4.0 deprecated** on npm (missing `@tryfabric/martian` dep).
 
-See `../todos.md` for product-level backlog.
+## Open backlog (next phases)
+
+- **Marketing**: demo GIF, Show HN draft, X/Reddit posts
+- **v1.7+ tools**: `archive_project(cascade)`, `add_subtask`, `block_task`/`unblock_task`, `get_milestones`, `get_fleeting_notes`, AI-native fields (`AI Summary` / `Last AI Access` / `Needs Processing`)
+- **v2 `notion-brain init`**: programmatic template provisioning (caveat: API can't create views; position as power-user install)
+- **Template schema cleanup**: delete 10 dead formulas (per `cto-review-automations.md`); add Age/Days-Since-Last-Edit formulas; fix `Task Completion %` rollup
+- **Strategic decisions queued**: Habit tracker normalization, split Areas/Resources, AI-Summary write timing
+- **Openclaw** autonomous helper — separate track, see `../openclaw-design.md`
+
+See `../todos.md` for the full product-level backlog.

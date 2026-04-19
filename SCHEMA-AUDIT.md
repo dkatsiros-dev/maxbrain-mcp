@@ -44,7 +44,7 @@ These are present in the owner's template but NOT in `PROPERTY_DEFAULTS`. Many a
 
 ## Recommendations
 
-Future tool backlog items unlocked by these extras (not in current v1.1.0):
+Future tool backlog items unlocked by these extras (not yet in current v1.6.2):
 
 - `snooze_task(task_id, until: date)` — set Tasks.Snooze
 - `block_task(task_id, blocked_by_id)` / `unblock_task(task_id)` — manage Tasks.Blocked by
@@ -57,4 +57,4 @@ Future tool backlog items unlocked by these extras (not in current v1.1.0):
 
 ## Action
 
-None required for v1.1.0. These are v1.2+ candidates. Log kept here for traceability.
+v1.2-1.4 candidates have shipped (snooze_task, get_blocked_tasks, get_reminders, update_*). Remainder queued for v1.7+. Log kept for traceability.
