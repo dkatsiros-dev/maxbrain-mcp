@@ -29,9 +29,17 @@ Connect your LLM — **Claude Code**, **Gemini CLI**, **Cursor**, or any MCP-com
 
 ## Setup
 
-Setup has two parts: (1) Notion — shared across all clients — and (2) your LLM client of choice.
+Setup has three parts: (0) duplicate the template, (1) Notion API setup — shared across all clients — and (2) your LLM client of choice.
 
-### Part 1 — Notion (shared)
+### Part 0 — Duplicate the Notion template
+
+**Public template:** https://prickly-organ-72f.notion.site/Ultimate-Brain-268e2c2e9b6b80dea529d8654270db2a
+
+Click **"Duplicate"** (top-right) to clone it into your own Notion workspace. See [`template/README.md`](./template/README.md) for what's inside and [`template/structure-spec.md`](./template/structure-spec.md) for the exact schema.
+
+> **Coming soon (v2):** `notion-brain init` CLI to scaffold the template programmatically — no duplication required.
+
+### Part 1 — Notion API setup (shared)
 
 #### 1.1 Get Your Notion API Key
 
