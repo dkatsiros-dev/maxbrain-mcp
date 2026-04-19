@@ -6,7 +6,7 @@ The Notion-side companion to [`@dkatsiros/notion-brain`](https://www.npmjs.com/p
 
 **Public duplicable link:** https://prickly-organ-72f.notion.site/Ultimate-Brain-268e2c2e9b6b80dea529d8654270db2a
 
-> ⚠️ The template is in the process of being renamed from "Ultimate Brain" → "Max Brain". The MCP server defaults to `ROOT_PAGE_NAME=Max Brain`. If you duplicate before the rename completes, set `ROOT_PAGE_NAME=Ultimate Brain` in your MCP config.
+> The MCP server defaults to `ROOT_PAGE_NAME=Max Brain` — match the title of your duplicated root page (or override the env var).
 
 ## What's in it
 

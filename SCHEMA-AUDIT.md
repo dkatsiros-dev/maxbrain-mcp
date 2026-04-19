@@ -1,7 +1,7 @@
 # Schema Audit — Live Template vs `PROPERTY_DEFAULTS`
 
 **Date:** 2026-04-13
-**Tested against:** Dimitris's personal workspace ("Ultimate Brain" root)
+**Tested against:** owner's personal Max Brain workspace
 
 ## Result
 

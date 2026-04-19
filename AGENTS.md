@@ -16,7 +16,7 @@ An npm package + git repo: a TypeScript MCP server that auto-discovers a Notion 
 2. **The npm package ships only three files:** `dist/index.js`, `README.md`, `package.json`, + `LICENSE`. If you add source files, update `files` in `package.json` and re-run `npm pack --dry-run` to verify.
 3. **Source maps are excluded from npm.** `package.json` `files` uses `dist/**/*.js` — do not switch to `"dist"` (would leak source).
 4. **Keep the server client-agnostic.** Descriptions and error messages should say "your LLM" / "your client", not "Claude Code" specifically. The Claude-specific auto-approve block lives only in the Claude Code section of the README.
-5. **Trademark safety:** never write "Ultimate Brain" anywhere — it's Thomas Frank's. Our name is **Max Brain** (even though the user's personal Notion workspace still uses "Ultimate Brain" as a label — that's a local override via `ROOT_PAGE_NAME` env var, not our branding).
+5. **Trademark safety:** the product name is **Max Brain**. Never use a different name in code, docs, descriptions, or commits — it would create trademark exposure with a competing template product.
 
 ## Pre-change checklist
 
@@ -27,7 +27,7 @@ Before editing tool behavior, schema handling, or auto-discovery:
 3. If touching tool I/O, also run a live e2e:
    ```bash
    NOTION_API_KEY="$(grep NOTION_API_KEY ../.mcp.json | sed -E 's/.*"(ntn_[^"]+)".*/\1/')" \
-   ROOT_PAGE_NAME="Ultimate Brain" \
+   ROOT_PAGE_NAME="Max Brain" \
    node dist/index.js &
    # Ctrl-C after seeing "running on stdio"
    ```
