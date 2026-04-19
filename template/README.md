@@ -4,7 +4,7 @@ The Notion-side companion to [`@dkatsiros/notion-brain`](https://www.npmjs.com/p
 
 ## Get the template
 
-**Public duplicable link:** https://prickly-organ-72f.notion.site/Ultimate-Brain-268e2c2e9b6b80dea529d8654270db2a
+**Public duplicable link:** https://dkatsiros.notion.site/Max-Brain-9977fa4ee5e683768e3b816d8fd81466
 
 > The MCP server defaults to `ROOT_PAGE_NAME=Max Brain` — match the title of your duplicated root page (or override the env var).
 

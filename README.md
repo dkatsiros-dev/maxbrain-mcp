@@ -33,7 +33,7 @@ Setup has three parts: (0) duplicate the template, (1) Notion API setup — shar
 
 ### Part 0 — Duplicate the Notion template
 
-**Public template:** https://prickly-organ-72f.notion.site/Ultimate-Brain-268e2c2e9b6b80dea529d8654270db2a
+**Public template:** https://dkatsiros.notion.site/Max-Brain-9977fa4ee5e683768e3b816d8fd81466
 
 Click **"Duplicate"** (top-right) to clone it into your own Notion workspace. See [`template/README.md`](./template/README.md) for what's inside and [`template/structure-spec.md`](./template/structure-spec.md) for the exact schema.
 
