@@ -871,6 +871,7 @@ function registerTools(server: McpServer) {
   );
 
   // --- create_task ---
+  const taskTagsList = schema.tasks.properties.Tags?.options?.join(', ') || '';
   server.tool(
     'create_task',
     'Create a new task. Due date in YYYY-MM-DD. Priority is a status property.',
@@ -880,7 +881,7 @@ function registerTools(server: McpServer) {
       project_id: z.string().optional().describe('Project ID to link to'),
       due_date: z.string().optional().describe('Due date (YYYY-MM-DD)'),
       priority: z.string().optional().describe('Priority level (status property)'),
-      tags: z.array(z.string()).optional().default([]).describe('Tags (multi-select)'),
+      tags: z.array(z.string()).optional().default([]).describe(`Tags (multi-select). EXISTING TAGS — strongly prefer reusing these to avoid polluting the user's tag list: ${taskTagsList || '(none yet)'}. Only invent a new tag if no existing tag fits the meaning.`),
       assignee: z.string().optional().describe('Assignee name (select)'),
     },
     async ({ title, description, project_id, due_date, priority, tags = [], assignee }) => {
@@ -917,7 +918,7 @@ function registerTools(server: McpServer) {
       priority: z.string().optional().describe('New priority'),
       due_date: z.string().optional().describe('New due date (YYYY-MM-DD) or empty string to clear'),
       project_id: z.string().optional().describe('New project ID (replaces existing relation)'),
-      tags: z.array(z.string()).optional().describe('New tags list (replaces existing)'),
+      tags: z.array(z.string()).optional().describe(`New tags list (replaces existing). EXISTING TAGS — strongly prefer reusing these: ${taskTagsList || '(none yet)'}. Only invent a new tag if no existing tag fits.`),
       assignee: z.string().optional().describe('New assignee'),
     },
     async ({ task_id, title, description, done_status, priority, due_date, project_id, tags, assignee }) => {
@@ -1083,6 +1084,7 @@ function registerTools(server: McpServer) {
   );
 
   // --- create_note ---
+  const noteTagsList = schema.notes.properties.Tags?.options?.join(', ') || '';
   server.tool(
     'create_note',
     'Create a new note. Can link to a Project and/or Area/Resource.',
@@ -1091,7 +1093,7 @@ function registerTools(server: McpServer) {
       content: z.string().optional().describe('Note body in Markdown — supports headings (## Heading), bullets (- item), numbered lists (1. item), bold (**bold**), italic (*italic*), code blocks (```), inline code (`code`), links ([text](url)), quotes (> quote). Rendered as proper Notion blocks.'),
       project_id: z.string().optional().describe('Project ID to link to'),
       area_id: z.string().optional().describe('Area/Resource ID to link to'),
-      tags: z.array(z.string()).optional().default([]).describe('Tags (multi-select)'),
+      tags: z.array(z.string()).optional().default([]).describe(`Tags (multi-select). EXISTING TAGS — strongly prefer reusing these to keep the user's tag list clean: ${noteTagsList || '(none yet)'}. Only invent a new tag if no existing tag fits the meaning.`),
     },
     async ({ title, content, project_id, area_id, tags = [] }) => {
       try {
@@ -1130,7 +1132,7 @@ function registerTools(server: McpServer) {
       content: z.string().optional().describe('New body content in Markdown (replaces all existing blocks). Supports headings, bullets, numbered lists, bold/italic, code, links, quotes.'),
       project_id: z.string().optional().describe('New Project ID (replaces existing relation)'),
       area_id: z.string().optional().describe('New Area/Resource ID (replaces existing relation)'),
-      tags: z.array(z.string()).optional().describe('New tags list (replaces existing)'),
+      tags: z.array(z.string()).optional().describe(`New tags list (replaces existing). EXISTING TAGS — strongly prefer reusing these: ${noteTagsList || '(none yet)'}. Only invent a new tag if no existing tag fits.`),
       favorite: z.boolean().optional().describe('Set favorite flag'),
       archive: z.boolean().optional().describe('Set archive flag'),
     },

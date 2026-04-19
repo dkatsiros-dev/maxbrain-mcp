@@ -3,6 +3,12 @@
 All notable changes to `@dkatsiros/notion-brain` are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.4.1] — 2026-04-19
+
+### Fixed
+- **Tag pollution prevention** — `create_note`, `update_note`, `create_task`, `update_task` now inject the user's existing tag list into the tool description, instructing the LLM to reuse existing tags instead of inventing new ones.
+- Declared `@tryfabric/martian` as a proper dependency (was previously bundled but not declared, breaking npm installs).
+
 ## [1.4.0] — 2026-04-19
 
 ### Added
