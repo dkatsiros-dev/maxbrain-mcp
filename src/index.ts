@@ -13,6 +13,44 @@ import type {
 } from '@notionhq/client/build/src/api-endpoints.js';
 
 // ---------------------------------------------------------------------------
+// Subcommand routing — must run before any module-level state init
+// ---------------------------------------------------------------------------
+
+const VERSION = '1.5.0';
+const subcommand = process.argv[2];
+
+if (subcommand === 'setup') {
+  const { run } = await import('./setup.js');
+  await run();
+  process.exit(process.exitCode ?? 0);
+}
+
+if (subcommand === '--help' || subcommand === '-h' || subcommand === 'help') {
+  process.stdout.write(`@dkatsiros/notion-brain — Notion PARA second brain MCP server
+
+Usage:
+  notion-brain                Start MCP server (stdio mode, default)
+  notion-brain setup          Interactive setup — Notion API key + LLM client config
+  notion-brain --help         Show this help
+  notion-brain --version      Show version
+
+The default mode (no args) speaks the MCP stdio protocol. Configure it in your
+LLM client (Claude Desktop, Claude Code, Cursor, Gemini CLI) — or run \`setup\`
+to do that automatically.
+
+Docs:    https://github.com/dkatsiros-dev/maxbrain-mcp
+npm:     https://www.npmjs.com/package/@dkatsiros/notion-brain
+Template: https://dkatsiros.notion.site/Max-Brain-9977fa4ee5e683768e3b816d8fd81466
+`);
+  process.exit(0);
+}
+
+if (subcommand === '--version' || subcommand === '-v') {
+  process.stdout.write(`${VERSION}\n`);
+  process.exit(0);
+}
+
+// ---------------------------------------------------------------------------
 // Configuration
 // ---------------------------------------------------------------------------
 

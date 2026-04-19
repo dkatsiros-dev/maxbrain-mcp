@@ -3,6 +3,22 @@
 All notable changes to `@dkatsiros/notion-brain` are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.5.0] — 2026-04-19
+
+### Added
+- **Interactive setup CLI** — `npx -y @dkatsiros/notion-brain setup` walks non-developers through Notion API key validation, integration check, client selection (Claude Desktop / Claude Code project / Cursor / Gemini CLI), and config writing. No manual JSON editing.
+- `--help` and `--version` subcommands.
+- `src/setup.ts` and `src/config-paths.ts` with cross-platform config locations (macOS / Windows / Linux).
+- Smoke tests for `--help` and `--version` exit codes + output.
+
+### Changed
+- Binary now routes by `process.argv[2]` at module top — `setup` / `--help` / `--version` short-circuit before MCP startup; default (no args) still starts MCP stdio server.
+- README leads with the new "Quick install" section; manual instructions kept below for power users.
+
+### Safety
+- Setup writes a `.bak` of any existing config file before merging, refuses to overwrite malformed JSON.
+- API key input is masked; key is never logged or stored anywhere except the chosen config file(s).
+
 ## [1.4.1] — 2026-04-19
 
 ### Fixed

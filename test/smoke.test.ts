@@ -6,9 +6,9 @@ import { fileURLToPath } from 'node:url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const BINARY = path.resolve(__dirname, '..', 'dist', 'index.js');
 
-function runServer(env: Record<string, string>, timeoutMs = 3000): Promise<{ code: number | null; stderr: string; stdout: string }> {
+function runServer(env: Record<string, string>, timeoutMs = 3000, args: string[] = []): Promise<{ code: number | null; stderr: string; stdout: string }> {
   return new Promise((resolve) => {
-    const proc = spawn('node', [BINARY], { env: { ...process.env, ...env }, stdio: ['pipe', 'pipe', 'pipe'] });
+    const proc = spawn('node', [BINARY, ...args], { env: { ...process.env, ...env }, stdio: ['pipe', 'pipe', 'pipe'] });
     let stdout = '';
     let stderr = '';
     proc.stdout.on('data', (d) => (stdout += d.toString()));
@@ -38,6 +38,21 @@ describe('server startup', () => {
       4000,
     );
     expect(stderr).toMatch(/CustomRoot|Initializing/);
+  });
+});
+
+describe('CLI subcommands', () => {
+  it('--help prints usage and exits 0', async () => {
+    const { code, stdout } = await runServer({}, 2000, ['--help']);
+    expect(stdout).toContain('Usage:');
+    expect(stdout).toContain('notion-brain setup');
+    expect(code).toBe(0);
+  });
+
+  it('--version prints semver and exits 0', async () => {
+    const { code, stdout } = await runServer({}, 2000, ['--version']);
+    expect(stdout).toMatch(/^\d+\.\d+\.\d+/);
+    expect(code).toBe(0);
   });
 });
 

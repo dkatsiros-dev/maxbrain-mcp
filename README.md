@@ -27,9 +27,27 @@ Connect your LLM — **Claude Code**, **Gemini CLI**, **Cursor**, or any MCP-com
 
 ---
 
-## Setup
+## Quick install (recommended)
 
-Setup has three parts: (0) duplicate the template, (1) Notion API setup — shared across all clients — and (2) your LLM client of choice.
+One command:
+
+```bash
+npx -y @dkatsiros/notion-brain setup
+```
+
+The interactive setup walks you through:
+1. Pasting your Notion API key
+2. Verifying the integration is connected to your Max Brain page
+3. Picking which LLM client(s) to configure (Claude Desktop / Claude Code / Cursor / Gemini CLI)
+4. Writing the right config to the right file — no manual JSON editing
+
+Before running, make sure you've duplicated the template into your Notion (see Part 0 below) and created a Notion integration with access to it.
+
+---
+
+## Setup (manual, step-by-step)
+
+If you'd rather configure things by hand, follow these three parts.
 
 ### Part 0 — Duplicate the Notion template
 
