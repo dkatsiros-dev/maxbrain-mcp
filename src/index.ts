@@ -16,7 +16,7 @@ import type {
 // Subcommand routing — must run before any module-level state init
 // ---------------------------------------------------------------------------
 
-const VERSION = '1.6.0';
+const VERSION = '1.6.1';
 const subcommand = process.argv[2];
 
 if (subcommand === 'setup') {
@@ -1198,6 +1198,22 @@ function registerTools(server: McpServer) {
         return { content: [{ type: 'text', text: JSON.stringify({ count: goals.length, goals }, null, 2) }] };
       } catch (err) {
         return { content: [{ type: 'text', text: `Error: ${formatError(err)}` }], isError: true };
+      }
+    },
+  );
+
+  // --- health_check ---
+  server.tool(
+    'health_check',
+    'Diagnose the Max Brain template against the schema this server expects. Returns a structured report: API key status, root page, all 5 databases, every required property (type + status options). Call this proactively when ANY other tool returns an unexpected error — the report tells the user exactly what to fix in their Notion (e.g. "add Low/Medium/High options to Tasks.Priority"). Cheap to call; takes ~3-5 seconds.',
+    {},
+    async () => {
+      try {
+        const { runHealthCheck } = await import('./doctor.js');
+        const report = await runHealthCheck(notion);
+        return { content: [{ type: 'text', text: JSON.stringify(report, null, 2) }] };
+      } catch (err) {
+        return { content: [{ type: 'text', text: `Error running health check: ${formatError(err)}` }], isError: true };
       }
     },
   );

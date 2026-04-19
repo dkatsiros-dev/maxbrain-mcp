@@ -3,6 +3,15 @@
 All notable changes to `@dkatsiros/notion-brain` are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.6.1] — 2026-04-19
+
+### Added
+- **`health_check` MCP tool** — exposes the doctor's logic to the LLM. When a tool fails with a cryptic Notion API error, the LLM can now call `health_check` to get a structured diagnosis (missing properties, status options, etc.) and tell the user exactly what to fix.
+- `runHealthCheck()` exported from `src/doctor.ts` — pure function, no side effects, used by both the CLI and the MCP tool.
+
+### Changed
+- `doctor` CLI is now a thin wrapper around `runHealthCheck()` — same single source of truth as the MCP tool.
+
 ## [1.6.0] — 2026-04-19
 
 ### Added

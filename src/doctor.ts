@@ -16,11 +16,32 @@ interface BlockListItem {
   child_database?: { title: string };
 }
 
-interface Issue {
+export interface Issue {
   level: 'error' | 'warning';
   area: string;
   message: string;
   fix?: string;
+}
+
+export interface PropertyCheck {
+  db: string;
+  property: string;
+  actual_type?: string;
+  expected_type: string;
+  status: 'ok' | 'missing' | 'wrong_type' | 'missing_options';
+  detail?: string;
+  options?: string[];
+}
+
+export interface HealthReport {
+  ok: boolean;
+  summary: string;
+  integration?: string;
+  root_page?: { id: string; title: string };
+  databases: Record<string, { found: boolean; id?: string }>;
+  property_checks: PropertyCheck[];
+  errors: Issue[];
+  warnings: Issue[];
 }
 
 const ROOT_PAGE_NAME = process.env['ROOT_PAGE_NAME'] || 'Max Brain';
@@ -85,14 +106,18 @@ async function findDatabases(notion: Client, rootPageId: string): Promise<Partia
   return result;
 }
 
-async function checkDatabase(notion: Client, dbKey: DbKey, dbId: string, issues: Issue[]) {
+async function checkDatabase(
+  notion: Client,
+  dbKey: DbKey,
+  dbId: string,
+): Promise<{ checks: PropertyCheck[]; issues: Issue[] }> {
   const db = await notion.databases.retrieve({ database_id: dbId });
   const liveProps = (db as { properties: Record<string, { type: string; status?: { options: Array<{ name: string }> } }> }).properties;
   const expected = PROPERTY_DEFAULTS[dbKey];
   const expectedStatus = EXPECTED_STATUS_OPTIONS[dbKey];
-  const propertyReports: string[] = [];
+  const checks: PropertyCheck[] = [];
+  const issues: Issue[] = [];
 
-  // Build case-insensitive lookup
   const liveLookup: Record<string, { actualName: string; type: string; statusOptions?: string[] }> = {};
   for (const [name, p] of Object.entries(liveProps)) {
     liveLookup[name.toLowerCase().trim()] = {
@@ -102,53 +127,168 @@ async function checkDatabase(notion: Client, dbKey: DbKey, dbId: string, issues:
     };
   }
 
-  // Check expected properties
   for (const [propName, expectedType] of Object.entries(expected)) {
     const live = liveLookup[propName.toLowerCase().trim()];
     if (!live) {
+      checks.push({ db: DB_NAME_DEFAULTS[dbKey], property: propName, expected_type: expectedType, status: 'missing' });
       issues.push({
         level: 'error',
         area: `${DB_NAME_DEFAULTS[dbKey]}.${propName}`,
         message: 'property is missing',
         fix: `Add a ${expectedType} property named "${propName}" to the ${DB_NAME_DEFAULTS[dbKey]} database (or set PROP_${dbKey.toUpperCase()}_${propName.replace(/[^a-zA-Z0-9]/g, '_').toUpperCase()} env var if you renamed it).`,
       });
-      propertyReports.push(`  ❌ ${propName} (${expectedType}) — MISSING`);
       continue;
     }
     if (live.type !== expectedType) {
+      checks.push({
+        db: DB_NAME_DEFAULTS[dbKey],
+        property: live.actualName,
+        actual_type: live.type,
+        expected_type: expectedType,
+        status: 'wrong_type',
+      });
       issues.push({
         level: 'warning',
         area: `${DB_NAME_DEFAULTS[dbKey]}.${live.actualName}`,
         message: `expected type "${expectedType}", got "${live.type}"`,
         fix: `Either change the property type in Notion, or accept the current shape (some MCP tools may not work).`,
       });
-      propertyReports.push(`  ⚠️  ${live.actualName} — type ${live.type} (expected ${expectedType})`);
       continue;
     }
 
-    // Status options check
     const expectedOpts = expectedStatus[propName];
     if (expectedOpts && live.statusOptions) {
       const liveSet = new Set(live.statusOptions.map((o) => o.toLowerCase().trim()));
       const missing = expectedOpts.filter((o) => !liveSet.has(o.toLowerCase().trim()));
       if (missing.length > 0) {
+        checks.push({
+          db: DB_NAME_DEFAULTS[dbKey],
+          property: live.actualName,
+          actual_type: live.type,
+          expected_type: expectedType,
+          status: 'missing_options',
+          detail: `missing: ${missing.join(', ')}`,
+          options: live.statusOptions,
+        });
         issues.push({
           level: 'error',
           area: `${DB_NAME_DEFAULTS[dbKey]}.${live.actualName}`,
           message: `missing status option(s): ${missing.join(', ')}`,
           fix: `Add the missing status option(s) in Notion (open the property → "Edit options" → add). Without them, MCP tools that filter by these values will fail.`,
         });
-        propertyReports.push(`  ❌ ${live.actualName} (${live.type}) — missing options: ${missing.join(', ')}`);
         continue;
       }
     }
 
-    propertyReports.push(`  ✓ ${live.actualName} (${live.type})${live.statusOptions ? ` — options: ${live.statusOptions.join(', ')}` : ''}`);
+    checks.push({
+      db: DB_NAME_DEFAULTS[dbKey],
+      property: live.actualName,
+      actual_type: live.type,
+      expected_type: expectedType,
+      status: 'ok',
+      ...(live.statusOptions ? { options: live.statusOptions } : {}),
+    });
   }
 
-  console.log(`\n${DB_NAME_DEFAULTS[dbKey].toUpperCase()} schema (${dbId.slice(0, 8)}...)`);
-  for (const line of propertyReports) console.log(line);
+  return { checks, issues };
 }
+
+// ---------------------------------------------------------------------------
+// PUBLIC: pure programmatic check — returns structured report. Called by CLI
+// AND by the `health_check` MCP tool.
+// ---------------------------------------------------------------------------
+
+export async function runHealthCheck(notion: Client): Promise<HealthReport> {
+  const errors: Issue[] = [];
+  const warnings: Issue[] = [];
+  const databases: Record<string, { found: boolean; id?: string }> = {};
+  const propertyChecks: PropertyCheck[] = [];
+
+  let integration: string | undefined;
+  try {
+    const me = await notion.users.me({});
+    integration = (me as { name?: string }).name || 'Notion integration';
+  } catch (err) {
+    return {
+      ok: false,
+      summary: 'API key invalid or expired',
+      databases: {},
+      property_checks: [],
+      errors: [{ level: 'error', area: 'API key', message: err instanceof Error ? err.message : String(err), fix: 'Verify your NOTION_API_KEY is correct (https://www.notion.so/my-integrations).' }],
+      warnings: [],
+    };
+  }
+
+  const rootPage = await findRootPage(notion);
+  if (!rootPage) {
+    const issue: Issue = {
+      level: 'error',
+      area: `Root page "${ROOT_PAGE_NAME}"`,
+      message: 'not found or not accessible to the integration',
+      fix: 'Duplicate the Max Brain template into your workspace AND connect this integration to the page (in Notion: "..." → Connections). If you renamed the root page, set ROOT_PAGE_NAME env var.',
+    };
+    errors.push(issue);
+    return {
+      ok: false,
+      summary: `Root page "${ROOT_PAGE_NAME}" not found`,
+      integration,
+      databases: {},
+      property_checks: [],
+      errors,
+      warnings,
+    };
+  }
+
+  const dbIds = await findDatabases(notion, rootPage.id);
+  for (const key of DB_KEYS) {
+    if (dbIds[key]) {
+      databases[DB_NAME_DEFAULTS[key]] = { found: true, id: dbIds[key]! };
+    } else {
+      databases[DB_NAME_DEFAULTS[key]] = { found: false };
+      errors.push({
+        level: 'error',
+        area: `Databases.${DB_NAME_DEFAULTS[key]}`,
+        message: 'database missing',
+        fix: `Create a database named "${DB_NAME_DEFAULTS[key]}" inside the "${DATABASES_PAGE_NAME}" sub-page (or set ${key.toUpperCase()}_DB_ID env var).`,
+      });
+    }
+  }
+
+  for (const key of DB_KEYS) {
+    if (!dbIds[key]) continue;
+    try {
+      const { checks, issues } = await checkDatabase(notion, key, dbIds[key]!);
+      propertyChecks.push(...checks);
+      for (const i of issues) (i.level === 'error' ? errors : warnings).push(i);
+    } catch (err) {
+      errors.push({
+        level: 'error',
+        area: DB_NAME_DEFAULTS[key],
+        message: `could not retrieve schema: ${err instanceof Error ? err.message : String(err)}`,
+      });
+    }
+  }
+
+  const ok = errors.length === 0;
+  const summary = ok
+    ? `Healthy. ${Object.values(databases).filter((d) => d.found).length}/${DB_KEYS.length} databases, ${propertyChecks.filter((c) => c.status === 'ok').length} properties verified, no issues.`
+    : `${errors.length} error(s), ${warnings.length} warning(s). ${errors.map((e) => `${e.area}: ${e.message}`).join('; ')}.`;
+
+  return {
+    ok,
+    summary,
+    integration,
+    root_page: rootPage,
+    databases,
+    property_checks: propertyChecks,
+    errors,
+    warnings,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// CLI wrapper — pretty-prints the report to terminal
+// ---------------------------------------------------------------------------
 
 async function getApiKey(): Promise<string> {
   const fromEnv = process.env['NOTION_API_KEY'];
@@ -169,91 +309,70 @@ export async function run(): Promise<void> {
 
   const apiKey = await getApiKey();
   const notion = new Client({ auth: apiKey });
-  const issues: Issue[] = [];
 
-  // 1. API key
   process.stdout.write('\nValidating API key... ');
-  try {
-    const me = await notion.users.me({});
-    const name = (me as { name?: string }).name || 'Notion integration';
-    console.log(`✓ Valid (integration: "${name}")`);
-  } catch (err) {
+  const report = await runHealthCheck(notion);
+
+  if (report.integration) {
+    console.log(`✓ Valid (integration: "${report.integration}")`);
+  } else {
     console.log('❌');
-    console.log(`   ${err instanceof Error ? err.message : String(err)}`);
+    for (const e of report.errors) console.log(`   ${e.message}`);
     process.exitCode = 1;
     return;
   }
 
-  // 2. Root page
-  process.stdout.write(`Locating "${ROOT_PAGE_NAME}" page... `);
-  const rootPage = await findRootPage(notion);
-  if (!rootPage) {
-    console.log('❌ NOT FOUND');
-    console.log(`   The integration cannot see a page titled "${ROOT_PAGE_NAME}".`);
-    console.log('   Make sure you have:');
-    console.log('     1. Duplicated the template into your Notion workspace');
-    console.log('     2. Connected this integration to the page (Notion: "..." → Connections)');
-    console.log('     3. Set ROOT_PAGE_NAME env var if you renamed the page');
+  if (report.root_page) {
+    console.log(`Locating "${ROOT_PAGE_NAME}" page... ✓ Found (${report.root_page.id.slice(0, 8)}...)`);
+  } else {
+    console.log(`Locating "${ROOT_PAGE_NAME}" page... ❌ NOT FOUND`);
+    for (const e of report.errors) {
+      console.log(`   ${e.message}`);
+      if (e.fix) console.log(`   → ${e.fix}`);
+    }
     process.exitCode = 1;
     return;
   }
-  console.log(`✓ Found (${rootPage.id.slice(0, 8)}...)`);
 
-  // 3. Databases discovery
-  process.stdout.write('Discovering databases... ');
-  const dbIds = await findDatabases(notion, rootPage.id);
-  const found = Object.keys(dbIds);
-  const missing = DB_KEYS.filter((k) => !(k in dbIds));
-  console.log(`${found.length}/5 found`);
+  const dbCount = Object.values(report.databases).filter((d) => d.found).length;
+  console.log(`Discovering databases... ${dbCount}/${DB_KEYS.length} found`);
+  for (const [name, info] of Object.entries(report.databases)) {
+    console.log(`  ${info.found ? '✓' : '❌'} ${name}${info.id ? `  (${info.id.slice(0, 8)}...)` : '  — NOT FOUND'}`);
+  }
 
-  for (const key of DB_KEYS) {
-    if (dbIds[key]) {
-      console.log(`  ✓ ${DB_NAME_DEFAULTS[key]}  (${dbIds[key]!.slice(0, 8)}...)`);
-    } else {
-      console.log(`  ❌ ${DB_NAME_DEFAULTS[key]}  — NOT FOUND`);
-      issues.push({
-        level: 'error',
-        area: `Databases.${DB_NAME_DEFAULTS[key]}`,
-        message: 'database missing',
-        fix: `Create a database named "${DB_NAME_DEFAULTS[key]}" inside the "${DATABASES_PAGE_NAME}" sub-page (or set ${key.toUpperCase()}_DB_ID env var).`,
-      });
+  // Group property checks by DB
+  const byDb = new Map<string, PropertyCheck[]>();
+  for (const c of report.property_checks) {
+    if (!byDb.has(c.db)) byDb.set(c.db, []);
+    byDb.get(c.db)!.push(c);
+  }
+  for (const [dbName, checks] of byDb) {
+    console.log(`\n${dbName.toUpperCase()} schema`);
+    for (const c of checks) {
+      const icon = c.status === 'ok' ? '✓' : c.status === 'wrong_type' ? '⚠️ ' : '❌';
+      const opts = c.options ? ` — options: ${c.options.join(', ')}` : '';
+      let line = `  ${icon} ${c.property}`;
+      if (c.actual_type) line += ` (${c.actual_type})`;
+      else line += ` (${c.expected_type})`;
+      if (c.status === 'wrong_type') line += `  expected ${c.expected_type}`;
+      if (c.status === 'missing') line += '  — MISSING';
+      if (c.status === 'missing_options') line += `  — ${c.detail}`;
+      console.log(`${line}${opts}`);
     }
   }
 
-  // 4. Per-DB schema validation
-  for (const key of DB_KEYS) {
-    if (!dbIds[key]) continue;
-    try {
-      await checkDatabase(notion, key, dbIds[key]!, issues);
-    } catch (err) {
-      console.log(`\n${DB_NAME_DEFAULTS[key].toUpperCase()} schema — could not retrieve`);
-      issues.push({
-        level: 'error',
-        area: DB_NAME_DEFAULTS[key],
-        message: `could not retrieve schema: ${err instanceof Error ? err.message : String(err)}`,
-      });
-    }
-  }
-
-  // 5. Summary
   console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  const errors = issues.filter((i) => i.level === 'error');
-  const warnings = issues.filter((i) => i.level === 'warning');
-
-  if (errors.length === 0 && warnings.length === 0) {
+  if (report.ok) {
     console.log('🎉  All checks passed. Your Max Brain is healthy.');
     return;
   }
 
-  console.log(`${errors.length} error(s), ${warnings.length} warning(s):\n`);
-  for (const issue of issues) {
+  console.log(`${report.errors.length} error(s), ${report.warnings.length} warning(s):\n`);
+  for (const issue of [...report.errors, ...report.warnings]) {
     const icon = issue.level === 'error' ? '❌' : '⚠️ ';
     console.log(`${icon} ${issue.area}: ${issue.message}`);
     if (issue.fix) console.log(`     → ${issue.fix}`);
   }
-
-  if (errors.length > 0) {
-    console.log('\nFix the errors before relying on the affected MCP tools.');
-    process.exitCode = 1;
-  }
+  console.log('\nFix the errors before relying on the affected MCP tools.');
+  process.exitCode = 1;
 }
