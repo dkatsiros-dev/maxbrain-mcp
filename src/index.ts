@@ -275,6 +275,28 @@ async function queryWithFallback(
 // Error formatting
 // ---------------------------------------------------------------------------
 
+const NOTION_TEXT_LIMIT = 2000;
+
+function richText(text: string): Array<{ type: 'text'; text: { content: string } }> {
+  const chunks: Array<{ type: 'text'; text: { content: string } }> = [];
+  for (let i = 0; i < text.length; i += NOTION_TEXT_LIMIT) {
+    chunks.push({ type: 'text', text: { content: text.slice(i, i + NOTION_TEXT_LIMIT) } });
+  }
+  return chunks.length > 0 ? chunks : [{ type: 'text', text: { content: '' } }];
+}
+
+function paragraphBlocks(text: string): Array<{ object: 'block'; type: 'paragraph'; paragraph: { rich_text: Array<{ type: 'text'; text: { content: string } }> } }> {
+  const blocks: Array<{ object: 'block'; type: 'paragraph'; paragraph: { rich_text: Array<{ type: 'text'; text: { content: string } }> } }> = [];
+  for (let i = 0; i < text.length; i += NOTION_TEXT_LIMIT) {
+    blocks.push({
+      object: 'block',
+      type: 'paragraph',
+      paragraph: { rich_text: [{ type: 'text', text: { content: text.slice(i, i + NOTION_TEXT_LIMIT) } }] },
+    });
+  }
+  return blocks.length > 0 ? blocks : [{ object: 'block', type: 'paragraph', paragraph: { rich_text: [{ type: 'text', text: { content: '' } }] } }];
+}
+
 function formatError(err: unknown): string {
   if (!(err instanceof Error)) return String(err);
   const msg = err.message;
@@ -873,7 +895,7 @@ function registerTools(server: McpServer) {
         const properties: Parameters<typeof notion.pages.create>[0]['properties'] = {
           Name: { title: [{ text: { content: title } }] },
         };
-        if (description) properties[prop('tasks', 'Description')] = { rich_text: [{ text: { content: description } }] };
+        if (description) properties[prop('tasks', 'Description')] = { rich_text: richText(description) };
         if (project_id) properties[prop('tasks', 'Project')] = { relation: [{ id: project_id }] };
         if (due_date) properties[prop('tasks', 'Due')] = { date: { start: due_date } };
         if (priority) properties[prop('tasks', 'Priority')] = { status: { name: priority } };
@@ -909,7 +931,7 @@ function registerTools(server: McpServer) {
       try {
         const properties: Parameters<typeof notion.pages.update>[0]['properties'] = {};
         if (title !== undefined) properties['Name'] = { title: [{ text: { content: title } }] };
-        if (description !== undefined) properties[prop('tasks', 'Description')] = { rich_text: [{ text: { content: description } }] };
+        if (description !== undefined) properties[prop('tasks', 'Description')] = { rich_text: richText(description) };
         if (done_status !== undefined) properties[prop('tasks', 'Done')] = { status: { name: done_status } };
         if (priority !== undefined) properties[prop('tasks', 'Priority')] = { status: { name: priority } };
         if (due_date !== undefined) properties[prop('tasks', 'Due')] = due_date === '' ? { date: null } : { date: { start: due_date } };
@@ -1092,11 +1114,7 @@ function registerTools(server: McpServer) {
           properties,
         };
         if (content) {
-          createParams.children = [{
-            object: 'block',
-            type: 'paragraph',
-            paragraph: { rich_text: [{ type: 'text', text: { content } }] },
-          }];
+          createParams.children = paragraphBlocks(content);
         }
 
         const page = await notion.pages.create(createParams);

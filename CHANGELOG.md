@@ -3,6 +3,13 @@
 All notable changes to `@dkatsiros/notion-brain` are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.2.1] — 2026-04-19
+
+### Fixed
+- `create_note` — content longer than 2000 chars now splits into multiple paragraph blocks (Notion's per-block limit)
+- `create_task` / `update_task` — Description field now handles >2000 char text via `richText()` chunking helper
+- Added shared `richText()` and `paragraphBlocks()` helpers for safe long-text handling across all tools
+
 ## [1.2.0] — 2026-04-13
 
 ### Added
