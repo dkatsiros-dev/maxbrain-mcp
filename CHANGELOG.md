@@ -3,6 +3,16 @@
 All notable changes to `@dkatsiros/notion-brain` are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.6.0] — 2026-04-19
+
+### Added
+- **`doctor` health-check command** — `npx -y @dkatsiros/notion-brain doctor` validates API key + auto-discovers your template + verifies every expected database, property type, and status option. Reports errors with concrete fix suggestions. Use it whenever an MCP tool starts failing or after customizing the template.
+- `EXPECTED_STATUS_OPTIONS` constant — codifies the status values MCP tools rely on (e.g. `Tasks.Done = "Done"`); doctor flags missing values that would cause silent breakage.
+- `src/schema-defaults.ts` — extracted `DB_KEYS` / `DB_NAME_DEFAULTS` / `PROPERTY_DEFAULTS` from `index.ts` so doctor + server share one source of truth.
+
+### Changed
+- `--help` documents the new `doctor` subcommand.
+
 ## [1.5.0] — 2026-04-19
 
 ### Added

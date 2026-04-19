@@ -233,6 +233,16 @@ All env vars except `NOTION_API_KEY` are optional:
 
 ## Troubleshooting
 
+**Run the health check first.** Before digging into any of the issues below, run:
+
+```bash
+npx -y @dkatsiros/notion-brain doctor
+```
+
+It validates your API key, auto-discovers your template, and reports every property/option mismatch with concrete fix instructions. Most "an MCP tool isn't working" issues are diagnosed in 10 seconds this way.
+
+---
+
 **Server takes a few seconds to start**
 - Normal — auto-discovery makes ~8 API calls on startup (search + schema fetch)
 

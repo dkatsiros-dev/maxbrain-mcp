@@ -16,11 +16,17 @@ import type {
 // Subcommand routing — must run before any module-level state init
 // ---------------------------------------------------------------------------
 
-const VERSION = '1.5.0';
+const VERSION = '1.6.0';
 const subcommand = process.argv[2];
 
 if (subcommand === 'setup') {
   const { run } = await import('./setup.js');
+  await run();
+  process.exit(process.exitCode ?? 0);
+}
+
+if (subcommand === 'doctor') {
+  const { run } = await import('./doctor.js');
   await run();
   process.exit(process.exitCode ?? 0);
 }
@@ -31,12 +37,14 @@ if (subcommand === '--help' || subcommand === '-h' || subcommand === 'help') {
 Usage:
   notion-brain                Start MCP server (stdio mode, default)
   notion-brain setup          Interactive setup — Notion API key + LLM client config
+  notion-brain doctor         Health check — verify your template matches the expected schema
   notion-brain --help         Show this help
   notion-brain --version      Show version
 
 The default mode (no args) speaks the MCP stdio protocol. Configure it in your
 LLM client (Claude Desktop, Claude Code, Cursor, Gemini CLI) — or run \`setup\`
-to do that automatically.
+to do that automatically. Run \`doctor\` if MCP tools start failing, or after
+you customize properties in your Notion template.
 
 Docs:    https://github.com/dkatsiros-dev/maxbrain-mcp
 npm:     https://www.npmjs.com/package/@dkatsiros/notion-brain
@@ -83,7 +91,7 @@ const notion = new Client({ auth: NOTION_API_KEY });
 // Schema types
 // ---------------------------------------------------------------------------
 
-type DbKey = 'projects' | 'tasks' | 'notes' | 'areas' | 'goals';
+import type { DbKey } from './schema-defaults.js';
 
 interface PropertyInfo {
   name: string;
@@ -104,65 +112,10 @@ type BrainSchema = Record<DbKey, DbSchema>;
 let schema: BrainSchema;
 
 // ---------------------------------------------------------------------------
-// Hardcoded defaults (match the shipped template)
+// Hardcoded defaults (match the shipped template) — see src/schema-defaults.ts
 // ---------------------------------------------------------------------------
 
-const DB_NAME_DEFAULTS: Record<DbKey, string> = {
-  projects: 'Projects',
-  tasks: 'Tasks',
-  notes: 'Notes',
-  areas: 'Areas/Resources',
-  goals: 'Goals',
-};
-
-const PROPERTY_DEFAULTS: Record<DbKey, Record<string, string>> = {
-  tasks: {
-    Done: 'status',
-    Priority: 'status',
-    Due: 'date',
-    Project: 'relation',
-    Tags: 'multi_select',
-    Assignee: 'select',
-    Description: 'rich_text',
-    Difficulty: 'select',
-    Snooze: 'date',
-    'Blocked by': 'relation',
-  },
-  projects: {
-    Status: 'status',
-    Area: 'relation',
-    Archive: 'checkbox',
-    Priority: 'checkbox',
-    'Target Deadline': 'date',
-    Goals: 'relation',
-  },
-  notes: {
-    Project: 'relation',
-    'Area/Resource': 'relation',
-    Tags: 'multi_select',
-    Favorite: 'checkbox',
-    Archive: 'checkbox',
-    'Remind Me Date': 'date',
-    Fleeting: 'checkbox',
-    URL: 'url',
-  },
-  areas: {
-    Type: 'status',
-    Projects: 'relation',
-    Notes: 'relation',
-    Archive: 'checkbox',
-  },
-  goals: {
-    Status: 'status',
-    'Target Deadline': 'date',
-    'Goal Set': 'date',
-    Achieved: 'date',
-    Projects: 'relation',
-    Area: 'relation',
-    Tags: 'multi_select',
-    Archive: 'checkbox',
-  },
-};
+import { DB_NAME_DEFAULTS, PROPERTY_DEFAULTS } from './schema-defaults.js';
 
 // ---------------------------------------------------------------------------
 // Property name override via env vars

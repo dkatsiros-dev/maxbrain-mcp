@@ -54,6 +54,18 @@ describe('CLI subcommands', () => {
     expect(stdout).toMatch(/^\d+\.\d+\.\d+/);
     expect(code).toBe(0);
   });
+
+  it('doctor with fake key fails validation cleanly (non-zero exit, expected error)', async () => {
+    const { code, stdout } = await runServer(
+      { NOTION_API_KEY: 'ntn_fake_key_for_doctor_smoke_test' },
+      8000,
+      ['doctor'],
+    );
+    expect(stdout).toContain('Health Check');
+    expect(stdout).toContain('Validating API key');
+    // Either 401 from Notion API or some other auth error — exit non-zero
+    expect(code).not.toBe(0);
+  });
 });
 
 describe('package integrity', () => {
