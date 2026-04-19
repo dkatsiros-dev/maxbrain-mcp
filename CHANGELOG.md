@@ -3,6 +3,16 @@
 All notable changes to `@dkatsiros/notion-brain` are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.6.2] — 2026-04-19
+
+### Fixed
+- **Doctor false-positive on emoji-decorated status options.** Status option matching is now fuzzy — strips emoji, punctuation, and whitespace before comparing. Templates with options like "🧀 Low" / "✅ Done" no longer trigger spurious "missing options" errors.
+- **`complete_task` works with decorated Done options.** Server now resolves status values via the live schema at write time — `complete_task` will set the actual option name (e.g. "✅ Done") even if the user customized the label. Same fix applied to status filters in `get_tasks`, `get_projects`, `get_blocked_tasks`, and `get_daily_summary`.
+
+### Added
+- `normalizeOption()` + `statusOpt()` helpers in `src/schema-defaults.ts` and `src/index.ts`. Single source of truth for fuzzy status-option matching, used by both server and doctor.
+- Doctor's "missing options" error message now lists the current options for context.
+
 ## [1.6.1] — 2026-04-19
 
 ### Added

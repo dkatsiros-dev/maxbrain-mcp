@@ -16,7 +16,7 @@ import type {
 // Subcommand routing — must run before any module-level state init
 // ---------------------------------------------------------------------------
 
-const VERSION = '1.6.1';
+const VERSION = '1.6.2';
 const subcommand = process.argv[2];
 
 if (subcommand === 'setup') {
@@ -115,7 +115,7 @@ let schema: BrainSchema;
 // Hardcoded defaults (match the shipped template) — see src/schema-defaults.ts
 // ---------------------------------------------------------------------------
 
-import { DB_NAME_DEFAULTS, PROPERTY_DEFAULTS } from './schema-defaults.js';
+import { DB_NAME_DEFAULTS, PROPERTY_DEFAULTS, normalizeOption } from './schema-defaults.js';
 
 // ---------------------------------------------------------------------------
 // Property name override via env vars
@@ -136,6 +136,15 @@ function prop(dbKey: DbKey, logicalName: string): string {
 
 function dbId(dbKey: DbKey): string {
   return schema[dbKey].id;
+}
+
+// Resolve a logical status value (e.g. "Done") to the actual option name in the
+// user's template (which may be decorated as e.g. "✅ Done"). Falls back to the
+// logical name if no fuzzy match is found.
+function statusOpt(dbKey: DbKey, propLogicalName: string, valueLogicalName: string): string {
+  const opts = schema[dbKey].properties[propLogicalName]?.options ?? [];
+  const target = normalizeOption(valueLogicalName);
+  return opts.find((o) => normalizeOption(o) === target) ?? valueLogicalName;
 }
 
 // ---------------------------------------------------------------------------
@@ -734,11 +743,11 @@ function registerTools(server: McpServer) {
 
         if (status === 'active') {
           filters.push(
-            { property: statusProp, status: { does_not_equal: 'Done' } },
-            { property: statusProp, status: { does_not_equal: 'Aborted' } },
+            { property: statusProp, status: { does_not_equal: statusOpt('projects', 'Status', 'Done') } },
+            { property: statusProp, status: { does_not_equal: statusOpt('projects', 'Status', 'Aborted') } },
           );
         } else if (status) {
-          filters.push({ property: statusProp, status: { equals: status } });
+          filters.push({ property: statusProp, status: { equals: statusOpt('projects', 'Status', status) } });
         }
 
         if (!include_archived) {
@@ -833,10 +842,11 @@ function registerTools(server: McpServer) {
         const doneProp = prop('tasks', 'Done');
         const dueProp = prop('tasks', 'Due');
 
+        const doneOpt = statusOpt('tasks', 'Done', 'Done');
         if (status === 'todo' || status === 'active') {
-          filters.push({ property: doneProp, status: { does_not_equal: 'Done' } });
+          filters.push({ property: doneProp, status: { does_not_equal: doneOpt } });
         } else if (status === 'done') {
-          filters.push({ property: doneProp, status: { equals: 'Done' } });
+          filters.push({ property: doneProp, status: { equals: doneOpt } });
         }
 
         if (project_id) {
@@ -948,7 +958,7 @@ function registerTools(server: McpServer) {
       try {
         await notion.pages.update({
           page_id: task_id,
-          properties: { [prop('tasks', 'Done')]: { status: { name: 'Done' } } },
+          properties: { [prop('tasks', 'Done')]: { status: { name: statusOpt('tasks', 'Done', 'Done') } } },
         });
         const fullPage = await notion.pages.retrieve({ page_id: task_id });
         if (!isFullPage(fullPage)) throw new Error('Could not retrieve updated page');
@@ -998,7 +1008,7 @@ function registerTools(server: McpServer) {
         const filter: NotionFilter = {
           and: [
             { property: blockedByProp, relation: { is_not_empty: true } },
-            { property: doneProp, status: { does_not_equal: 'Done' } },
+            { property: doneProp, status: { does_not_equal: statusOpt('tasks', 'Done', 'Done') } },
           ],
         };
         const pages = await queryWithFallback(
@@ -1232,16 +1242,17 @@ function registerTools(server: McpServer) {
 
         const doneProp = prop('tasks', 'Done');
         const dueProp = prop('tasks', 'Due');
+        const doneOpt = statusOpt('tasks', 'Done', 'Done');
 
         const overdueFilter: NotionFilter = {
           and: [
-            { property: doneProp, status: { does_not_equal: 'Done' } },
+            { property: doneProp, status: { does_not_equal: doneOpt } },
             { property: dueProp, date: { on_or_before: todayStr } },
           ],
         };
         const upcomingFilter: NotionFilter = {
           and: [
-            { property: doneProp, status: { does_not_equal: 'Done' } },
+            { property: doneProp, status: { does_not_equal: doneOpt } },
             { property: dueProp, date: { after: todayStr } },
             { property: dueProp, date: { on_or_before: in7Days } },
           ],

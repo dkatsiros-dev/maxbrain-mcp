@@ -65,6 +65,16 @@ export const PROPERTY_DEFAULTS: Record<DbKey, Record<string, string>> = {
   },
 };
 
+// Strip emoji, punctuation, and whitespace for fuzzy comparison of status option names.
+// Lets us match "Low" against template values like "🧀 Low" or " low ".
+export function normalizeOption(s: string): string {
+  return s
+    .toLowerCase()
+    .normalize('NFKD')
+    .replace(/[\p{Extended_Pictographic}\p{Emoji_Component}]/gu, '')
+    .replace(/[^a-z0-9]/g, '');
+}
+
 // Status-property option values that the MCP relies on. Missing options here
 // cause silent breakage (e.g. complete_task hardcodes "Done"). Doctor flags these.
 // Goals.Status is intentionally NOT listed — users commonly customize goal lifecycles.

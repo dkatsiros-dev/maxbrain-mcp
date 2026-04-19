@@ -5,6 +5,7 @@ import {
   DB_NAME_DEFAULTS,
   PROPERTY_DEFAULTS,
   EXPECTED_STATUS_OPTIONS,
+  normalizeOption,
   type DbKey,
 } from './schema-defaults.js';
 
@@ -158,8 +159,9 @@ async function checkDatabase(
 
     const expectedOpts = expectedStatus[propName];
     if (expectedOpts && live.statusOptions) {
-      const liveSet = new Set(live.statusOptions.map((o) => o.toLowerCase().trim()));
-      const missing = expectedOpts.filter((o) => !liveSet.has(o.toLowerCase().trim()));
+      // Fuzzy match: tolerate emoji prefixes, whitespace, punctuation
+      const liveNormalized = new Set(live.statusOptions.map(normalizeOption));
+      const missing = expectedOpts.filter((o) => !liveNormalized.has(normalizeOption(o)));
       if (missing.length > 0) {
         checks.push({
           db: DB_NAME_DEFAULTS[dbKey],
@@ -173,8 +175,8 @@ async function checkDatabase(
         issues.push({
           level: 'error',
           area: `${DB_NAME_DEFAULTS[dbKey]}.${live.actualName}`,
-          message: `missing status option(s): ${missing.join(', ')}`,
-          fix: `Add the missing status option(s) in Notion (open the property → "Edit options" → add). Without them, MCP tools that filter by these values will fail.`,
+          message: `missing status option(s): ${missing.join(', ')} (current: ${live.statusOptions.join(', ')})`,
+          fix: `Add the missing status option(s) in Notion (open the property → "Edit options" → add). Decoration like emoji prefixes is fine — doctor matches case + punctuation insensitively.`,
         });
         continue;
       }
