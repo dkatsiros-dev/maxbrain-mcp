@@ -3,6 +3,16 @@
 All notable changes to `@dkatsiros/notion-brain` are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.4.0] — 2026-04-19
+
+### Added
+- **Markdown rendering** across all content fields — `create_note`, `update_note`, `create_task`, `update_task` now parse Markdown into proper Notion blocks (headings, bullets, numbered lists, code blocks, quotes) and inline formatting (bold, italic, code, links). Powered by `@tryfabric/martian`.
+- Tool descriptions updated to advertise Markdown support so LLMs use formatting instead of plain text.
+
+### Changed
+- `update_note` content replacement now deletes ALL child blocks (not just paragraphs) before appending new content — accommodates the richer block types.
+- tsup config gained CJS-`require` shim so bundled CJS deps (vfile, etc.) work in ESM output.
+
 ## [1.3.0] — 2026-04-19
 
 ### Added

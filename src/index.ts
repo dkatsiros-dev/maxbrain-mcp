@@ -1,6 +1,7 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { Client } from '@notionhq/client';
+import { markdownToBlocks, markdownToRichText } from '@tryfabric/martian';
 import { z } from 'zod';
 import type {
   PageObjectResponse,
@@ -275,26 +276,18 @@ async function queryWithFallback(
 // Error formatting
 // ---------------------------------------------------------------------------
 
-const NOTION_TEXT_LIMIT = 2000;
+// Markdown → Notion conversion (via @tryfabric/martian).
+// Use richText() for property fields (e.g. Task.Description); use blocksFromMarkdown() for page body.
+// Both handle Notion's 2000-char limit and inline formatting (bold/italic/code/links/etc).
 
-function richText(text: string): Array<{ type: 'text'; text: { content: string } }> {
-  const chunks: Array<{ type: 'text'; text: { content: string } }> = [];
-  for (let i = 0; i < text.length; i += NOTION_TEXT_LIMIT) {
-    chunks.push({ type: 'text', text: { content: text.slice(i, i + NOTION_TEXT_LIMIT) } });
-  }
-  return chunks.length > 0 ? chunks : [{ type: 'text', text: { content: '' } }];
+function richText(text: string): any {
+  if (!text) return [{ type: 'text' as const, text: { content: '' } }];
+  return markdownToRichText(text) as any;
 }
 
-function paragraphBlocks(text: string): Array<{ object: 'block'; type: 'paragraph'; paragraph: { rich_text: Array<{ type: 'text'; text: { content: string } }> } }> {
-  const blocks: Array<{ object: 'block'; type: 'paragraph'; paragraph: { rich_text: Array<{ type: 'text'; text: { content: string } }> } }> = [];
-  for (let i = 0; i < text.length; i += NOTION_TEXT_LIMIT) {
-    blocks.push({
-      object: 'block',
-      type: 'paragraph',
-      paragraph: { rich_text: [{ type: 'text', text: { content: text.slice(i, i + NOTION_TEXT_LIMIT) } }] },
-    });
-  }
-  return blocks.length > 0 ? blocks : [{ object: 'block', type: 'paragraph', paragraph: { rich_text: [{ type: 'text', text: { content: '' } }] } }];
+function blocksFromMarkdown(text: string): any[] {
+  if (!text) return [];
+  return markdownToBlocks(text) as any[];
 }
 
 function formatError(err: unknown): string {
@@ -883,7 +876,7 @@ function registerTools(server: McpServer) {
     'Create a new task. Due date in YYYY-MM-DD. Priority is a status property.',
     {
       title: z.string().describe('Task title'),
-      description: z.string().optional().describe('Task description'),
+      description: z.string().optional().describe('Task description (Markdown supported: bold, italic, code, links — rendered as inline rich text)'),
       project_id: z.string().optional().describe('Project ID to link to'),
       due_date: z.string().optional().describe('Due date (YYYY-MM-DD)'),
       priority: z.string().optional().describe('Priority level (status property)'),
@@ -1095,7 +1088,7 @@ function registerTools(server: McpServer) {
     'Create a new note. Can link to a Project and/or Area/Resource.',
     {
       title: z.string().describe('Note title'),
-      content: z.string().optional().describe('Note body (plain text, added as paragraph block)'),
+      content: z.string().optional().describe('Note body in Markdown — supports headings (## Heading), bullets (- item), numbered lists (1. item), bold (**bold**), italic (*italic*), code blocks (```), inline code (`code`), links ([text](url)), quotes (> quote). Rendered as proper Notion blocks.'),
       project_id: z.string().optional().describe('Project ID to link to'),
       area_id: z.string().optional().describe('Area/Resource ID to link to'),
       tags: z.array(z.string()).optional().default([]).describe('Tags (multi-select)'),
@@ -1114,7 +1107,7 @@ function registerTools(server: McpServer) {
           properties,
         };
         if (content) {
-          createParams.children = paragraphBlocks(content);
+          createParams.children = blocksFromMarkdown(content);
         }
 
         const page = await notion.pages.create(createParams);
@@ -1134,7 +1127,7 @@ function registerTools(server: McpServer) {
     {
       note_id: z.string().describe('Note page ID to update'),
       title: z.string().optional().describe('New note title'),
-      content: z.string().optional().describe('New body content (replaces all existing paragraph blocks)'),
+      content: z.string().optional().describe('New body content in Markdown (replaces all existing blocks). Supports headings, bullets, numbered lists, bold/italic, code, links, quotes.'),
       project_id: z.string().optional().describe('New Project ID (replaces existing relation)'),
       area_id: z.string().optional().describe('New Area/Resource ID (replaces existing relation)'),
       tags: z.array(z.string()).optional().describe('New tags list (replaces existing)'),
@@ -1165,12 +1158,12 @@ function registerTools(server: McpServer) {
         if (hasContentUpdate) {
           const existing = await notion.blocks.children.list({ block_id: note_id, page_size: 100 });
           for (const block of existing.results) {
-            if ('type' in block && block.type === 'paragraph') {
+            if ('id' in block) {
               await notion.blocks.delete({ block_id: block.id });
             }
           }
           if (content) {
-            await notion.blocks.children.append({ block_id: note_id, children: paragraphBlocks(content) });
+            await notion.blocks.children.append({ block_id: note_id, children: blocksFromMarkdown(content) });
           }
         }
 
