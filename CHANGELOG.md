@@ -3,6 +3,12 @@
 All notable changes to `@dkatsiros/notion-brain` are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.3.0] — 2026-04-19
+
+### Added
+- `update_note` tool — update title, body content, project/area links, tags, favorite, archive flags
+- Body content replacement deletes existing paragraph blocks and appends new ones (handles long text via `paragraphBlocks()`)
+
 ## [1.2.1] — 2026-04-19
 
 ### Fixed

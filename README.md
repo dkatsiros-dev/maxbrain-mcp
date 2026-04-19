@@ -164,6 +164,7 @@ Talk to your LLM naturally:
 | `get_reminders` | List notes with a Remind Me Date (defaults to today/past) |
 | `get_notes` | List notes, filter by project, area, or tag |
 | `create_note` | Create a note with project/area link and tags |
+| `update_note` | Update note fields (title, content, project, area, tags, favorite, archive) |
 | `get_goals` | List goals, filter by status, exclude archived |
 | `get_daily_summary` | Overdue + upcoming tasks + recent notes |
 

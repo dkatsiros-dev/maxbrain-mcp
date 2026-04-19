@@ -1127,6 +1127,62 @@ function registerTools(server: McpServer) {
     },
   );
 
+  // --- update_note ---
+  server.tool(
+    'update_note',
+    'Update an existing note. Provide any subset of fields to change. To replace body content, pass new content (overwrites all existing paragraph blocks).',
+    {
+      note_id: z.string().describe('Note page ID to update'),
+      title: z.string().optional().describe('New note title'),
+      content: z.string().optional().describe('New body content (replaces all existing paragraph blocks)'),
+      project_id: z.string().optional().describe('New Project ID (replaces existing relation)'),
+      area_id: z.string().optional().describe('New Area/Resource ID (replaces existing relation)'),
+      tags: z.array(z.string()).optional().describe('New tags list (replaces existing)'),
+      favorite: z.boolean().optional().describe('Set favorite flag'),
+      archive: z.boolean().optional().describe('Set archive flag'),
+    },
+    async ({ note_id, title, content, project_id, area_id, tags, favorite, archive }) => {
+      try {
+        const properties: Parameters<typeof notion.pages.update>[0]['properties'] = {};
+        if (title !== undefined) properties['Name'] = { title: [{ text: { content: title } }] };
+        if (project_id !== undefined) properties[prop('notes', 'Project')] = { relation: [{ id: project_id }] };
+        if (area_id !== undefined) properties[prop('notes', 'Area/Resource')] = { relation: [{ id: area_id }] };
+        if (tags !== undefined) properties[prop('notes', 'Tags')] = { multi_select: tags.map((t) => ({ name: t })) };
+        if (favorite !== undefined) properties[prop('notes', 'Favorite')] = { checkbox: favorite };
+        if (archive !== undefined) properties[prop('notes', 'Archive')] = { checkbox: archive };
+
+        const hasPropertyUpdates = Object.keys(properties).length > 0;
+        const hasContentUpdate = content !== undefined;
+
+        if (!hasPropertyUpdates && !hasContentUpdate) {
+          return { content: [{ type: 'text', text: 'No fields provided to update.' }], isError: true };
+        }
+
+        if (hasPropertyUpdates) {
+          await notion.pages.update({ page_id: note_id, properties });
+        }
+
+        if (hasContentUpdate) {
+          const existing = await notion.blocks.children.list({ block_id: note_id, page_size: 100 });
+          for (const block of existing.results) {
+            if ('type' in block && block.type === 'paragraph') {
+              await notion.blocks.delete({ block_id: block.id });
+            }
+          }
+          if (content) {
+            await notion.blocks.children.append({ block_id: note_id, children: paragraphBlocks(content) });
+          }
+        }
+
+        const fullPage = await notion.pages.retrieve({ page_id: note_id });
+        if (!isFullPage(fullPage)) throw new Error('Could not retrieve updated page');
+        return { content: [{ type: 'text', text: JSON.stringify({ success: true, note: formatNote(fullPage) }, null, 2) }] };
+      } catch (err) {
+        return { content: [{ type: 'text', text: `Error: ${formatError(err)}` }], isError: true };
+      }
+    },
+  );
+
   // --- get_goals ---
   server.tool(
     'get_goals',
